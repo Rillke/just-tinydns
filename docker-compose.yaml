@@ -1,0 +1,11 @@
+version: "3"
+services:
+  dns:
+    build: .
+    restart: always
+    volumes:
+      - ./test.dns:/srv/dns/root/data
+    ports:
+      - "${DNS_BIND_IP}:53:53/tcp"
+      - "${DNS_BIND_IP}:53:53/udp"
+

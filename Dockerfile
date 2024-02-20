@@ -1,18 +1,33 @@
-FROM alpine 
+FROM alpine:edge
+# A more up-to-date-version might be:
+# https://github.com/xcsrz/just-tinydns/tree/master
 
-RUN echo "http://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
+ENV GID tinydns
+ENV UID tinydns
+ENV IP 0.0.0.0
+ENV ROOT /etc/tinydns
 
-RUN apk update
+RUN \
+  apk add --no-cache gcc g++ git make linux-headers libc-dev ucspi-tcp ucspi-tcp6 ca-certificates \
+  && update-ca-certificates \
+  && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/ daemontools
 
-RUN apk add make gcc g++ ucspi-tcp6 daemontools ca-certificates wget && update-ca-certificates
+RUN \
+  git clone https://github.com/henryk/tinydnssec.git \
+  && cd tinydnssec \
+  && make \
+  && make setup check
 
-RUN mkdir /src ; cd /src ; \
-    wget -O - https://cr.yp.to/djbdns/djbdns-1.05.tar.gz | tar xzf - ; \
-    cd djbdns-1.05 ; \
-    echo gcc -O2 -include /usr/include/errno.h > conf-cc ; \
-    make && make setup check
+RUN \
+  adduser -HD $UID \
+  && adduser -HD dnslog \
+  && adduser -HD Gaxfrdns \
+  && adduser -HD Gdnslog
 
-RUN tinydns-conf nobody nobody /srv/dns 0.0.0.0 
+RUN \
+  tinydns-conf $UID dnslog /srv/dns $IP \
+  && axfrdns-conf Gaxfrdns Gdnslog /srv/axfrdns /srv/dns $IP \
+  && echo ':allow,AXFR=""' > /srv/axfrdns/tcp
 
 COPY start.sh /start.sh
 COPY rebuild.sh /rebuild.sh
@@ -21,6 +36,9 @@ RUN chmod +x /start.sh
 RUN chmod +x /rebuild.sh
 
 COPY test.dns /srv/dns/root/data
+
+EXPOSE 53/udp
+EXPOSE 53/tcp
 
 CMD '/start.sh'
 
