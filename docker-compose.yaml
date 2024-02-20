@@ -4,7 +4,8 @@ services:
     build: .
     restart: always
     volumes:
-      - ./test.dns:/srv/dns/root/data
+      - /tmp/ddns_updates:/tmp/ddns_updates
+      - /var/dns/tinydns-data:/srv/dns/root/data
     ports:
       - "${DNS_BIND_IP}:53:53/tcp"
       - "${DNS_BIND_IP}:53:53/udp"
